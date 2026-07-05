@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Final Prototype — Source Mosaic with Confidence Signals</title>
+<style>
+  :root{
+    --ink:#202124; --muted:#5f6368; --line:#dadce0; --card-line:#e8eaed;
+    --accent:#1a73e8; --bg:#fff;
+    --settled:#188038; --settled-bg:#e6f4ea;
+    --contested:#b06000; --contested-bg:#fef7e0;
+    --support:#188038; --oppose:#c5221f; --mixed:#8430ce; --describe:#5f6368;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Roboto,Helvetica,sans-serif;color:var(--ink);background:#fff}
+  .page{max-width:1080px;margin:0 auto;padding:22px 26px}
+  .top{display:flex;align-items:center;gap:18px}
+  .logo{font-size:26px;font-weight:700;letter-spacing:-1px}
+  .logo span:nth-child(1){color:#4285F4}.logo span:nth-child(2){color:#EA4335}
+  .logo span:nth-child(3){color:#FBBC05}.logo span:nth-child(4){color:#4285F4}
+  .logo span:nth-child(5){color:#34A853}.logo span:nth-child(6){color:#EA4335}
+  .search{flex:1;display:flex;align-items:center;border:1px solid var(--line);border-radius:24px;
+    padding:9px 18px;box-shadow:0 1px 4px rgba(32,33,36,.10);font-size:16px;color:var(--ink)}
+  .search .icons{margin-left:auto;color:var(--muted);font-size:15px}
+  .tabs{display:flex;gap:22px;color:var(--muted);font-size:13px;margin:14px 0 6px 2px;border-bottom:1px solid var(--card-line);padding-bottom:8px}
+  .tabs .active{color:var(--accent);border-bottom:3px solid var(--accent);padding-bottom:8px;margin-bottom:-9px}
+
+  .ai{border:1px solid var(--card-line);border-radius:14px;padding:20px 22px;margin-top:16px;box-shadow:0 1px 3px rgba(32,33,36,.06)}
+  .ai-head{display:flex;align-items:center;gap:10px}
+  .spark{width:22px;height:22px;border-radius:50%;background:conic-gradient(from 180deg,#4285F4,#9b72cb,#d96570,#4285F4)}
+  .ai-title{font-size:17px;font-weight:600}
+  .frame{color:var(--muted);font-size:14px;margin:8px 0 12px;line-height:1.5}
+
+  .bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#f8f9fa;border:1px solid var(--card-line);
+    border-radius:10px;padding:9px 14px;font-size:12.5px;color:var(--muted);margin-bottom:16px}
+  .cluster b{color:var(--ink)}
+  .legend{display:flex;gap:14px;margin-left:auto}
+  .swatch{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .dot.s{background:var(--settled)}.dot.c{background:var(--contested)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .card{border:1px solid var(--card-line);border-radius:12px;padding:13px 15px;background:#fff;transition:border-color .15s,box-shadow .15s;cursor:pointer}
+  .card.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(26,115,232,.15)}
+  @keyframes flash{0%{box-shadow:0 0 0 3px rgba(26,115,232,.40)}100%{box-shadow:none}}
+  .panel.flash{animation:flash .7s ease-out}
+  .cardhead{display:flex;align-items:center;gap:8px}
+  .card .name{font-weight:700;font-size:14px}
+  .pos{margin-left:auto;font-size:11px;font-weight:700;letter-spacing:.4px;border-radius:999px;padding:2px 9px;color:#fff;white-space:nowrap}
+  .pos.support{background:var(--support)}.pos.oppose{background:var(--oppose)}
+  .pos.mixed{background:var(--mixed)}.pos.describe{background:var(--describe)}
+  .type{font-size:11px;color:var(--muted);margin-top:3px}
+  .card p{font-size:13.5px;line-height:1.55;margin:9px 0 8px}
+  .tag{border-radius:5px;padding:1px 6px;font-weight:600;white-space:nowrap;font-size:12.5px;cursor:help}
+  .tag.s{background:var(--settled-bg);color:var(--settled)}
+  .tag.c{background:var(--contested-bg);color:var(--contested)}
+  .trace{color:var(--accent);font-size:12.5px;cursor:pointer;font-weight:600;user-select:none}
+  .trace:hover{text-decoration:underline}
+
+  .panel{grid-column:1 / -1;border:1px solid var(--accent);border-radius:12px;background:#f8fbff;padding:14px 16px;margin-top:2px}
+  .panel h4{margin:0 0 8px;font-size:13px;color:var(--accent)}
+  .panel .badge{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;margin-left:8px;color:#fff;vertical-align:middle}
+  .panel .badge.s{background:var(--settled)} .panel .badge.c{background:var(--contested)}
+  .panel .q{font-size:13px;line-height:1.55;border-left:3px solid var(--settled);padding-left:10px;margin:6px 0}
+  .panel .q.against{border-left-color:var(--oppose)}
+  .panel a{color:var(--accent);text-decoration:none;font-weight:600}
+  .panel a:hover{text-decoration:underline}
+  .panel .why{font-size:12.5px;color:var(--muted);margin-top:10px;background:#fff;border:1px dashed var(--card-line);border-radius:8px;padding:9px 11px}
+  .panel .why b{color:var(--contested)}
+  .panel .read{margin-top:10px;font-size:12.5px}
+  .sources{margin-top:14px;padding-top:12px;border-top:1px dashed var(--card-line);font-size:12.5px;color:var(--muted)}
+  .sources a{color:var(--accent);text-decoration:none;margin-right:14px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div class="logo"><span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span></div>
+    <div class="search">should the federal minimum wage be raised to $15?<span class="icons">&#10005; &nbsp; &#127908; &nbsp; &#128269;</span></div>
+  </div>
+  <div class="tabs"><span class="active">All</span><span>Images</span><span>News</span><span>Videos</span><span>Shopping</span><span>More</span></div>
+
+  <div class="ai">
+    <div class="ai-head"><span class="spark"></span><div class="ai-title">AI Overview &mdash; Sources &amp; Confidence</div></div>
+    <div class="frame">Whether the federal minimum wage of $7.25 should rise to $15 is debated among economists, policymakers, and labor advocates. Below are the sources themselves, each labeled by position and by whether its key claim is settled or contested. Click <b>&#9656; trace claim</b> on any card to read the source and see why the claim is contested.</div>
+
+    <div class="bar">
+      <span class="cluster"><b>6 sources</b> &middot; 2 support &middot; 2 oppose &middot; 1 mixed &middot; 1 describes</span>
+      <span class="legend">
+        <span class="swatch"><span class="dot s"></span> settled fact</span>
+        <span class="swatch"><span class="dot c"></span> contested claim</span>
+      </span>
+    </div>
+
+    <div class="grid">
+      <div class="card" data-src="EPI">
+        <div class="cardhead"><span class="name">Economic Policy Institute</span><span class="pos support">SUPPORTS</span></div>
+        <div class="type">think tank &middot; labor-aligned</div>
+        <p>A $15 floor would raise pay for <span class="tag c" title="Contested: sources disagree on the number, not the direction">up to ~32 million workers (contested)</span>, with limited measurable employment loss in recent state-level studies.</p>
+        <span class="trace">&#9656; trace claim</span>
+      </div>
+      <div class="card" data-src="CBO">
+        <div class="cardhead"><span class="name">Congressional Budget Office</span><span class="pos mixed">MIXED</span></div>
+        <div class="type">government &middot; nonpartisan</div>
+        <p>Raises pay for ~17 million workers but <span class="tag c" title="Contested: model projection vs. real-world studies disagree">reduces employment by ~1.4 million (contested)</span> as employers substitute capital for labor.</p>
+        <span class="trace">&#9656; trace claim</span>
+      </div>
+      <div class="card" data-src="Brookings">
+        <div class="cardhead"><span class="name">Brookings Institution</span><span class="pos oppose">OPPOSES</span></div>
+        <div class="type">think tank &middot; centrist</div>
+        <p><span class="tag c" title="Contested: depends on regional vs national framing">Job losses concentrate in low-wage regions (contested)</span> where $15 exceeds the local median wage.</p>
+        <span class="trace">&#9656; trace claim</span>
+      </div>
+      <div class="card" data-src="Cato">
+        <div class="cardhead"><span class="name">Cato Institute</span><span class="pos oppose">OPPOSES</span></div>
+        <div class="type">think tank &middot; libertarian</div>
+        <p>The minimum wage is <span class="tag c" title="Contested: about who captures the benefit">a regressive way to fight poverty (contested)</span>; benefits often miss the poorest households.</p>
+        <span class="trace">&#9656; trace claim</span>
+      </div>
+      <div class="card" data-src="BLS">
+        <div class="cardhead"><span class="name">Bureau of Labor Statistics</span><span class="pos describe">DESCRIBES</span></div>
+        <div class="type">government &middot; data</div>
+        <p>The federal minimum has been <span class="tag s" title="Settled: a data record, no source disputes it">$7.25 since 2009 (settled)</span>, and its <span class="tag s" title="Settled: inflation-adjusted record">real value has fallen since 1968 (settled)</span>.</p>
+        <span class="trace">&#9656; trace claim</span>
+      </div>
+      <div class="card" data-src="AFLCIO">
+        <div class="cardhead"><span class="name">AFL-CIO</span><span class="pos support">SUPPORTS</span></div>
+        <div class="type">labor federation</div>
+        <p>Raising the floor to $15 would lift pay for low-wage workers nationwide, with <span class="tag c" title="Contested: the employment effect is disputed">limited effect on total jobs (contested)</span>.</p>
+        <span class="trace">&#9656; trace claim</span>
+      </div>
+
+      <div class="panel" id="tracePanel"><!-- populated by JS --></div>
+    </div>
+
+    <div class="sources">Read the sources:
+      <a href="https://www.epi.org/publication/why-america-needs-a-15-minimum-wage/" target="_blank">Economic Policy Institute</a>
+      <a href="https://www.cbo.gov/publication/56975" target="_blank">Congressional Budget Office</a>
+      <a href="https://www.brookings.edu/topic/minimum-wage/" target="_blank">Brookings</a>
+      <a href="https://www.cato.org/tags/minimum-wage" target="_blank">Cato</a>
+      <a href="https://www.bls.gov/opub/reports/minimum-wage/2022/home.htm" target="_blank">BLS</a>
+      <a href="https://aflcio.org/issues/minimum-wage" target="_blank">AFL-CIO</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // NOTE: source links point to each organization's canonical page. Verify each resolves
+  // and update if a URL has moved (these were not live-checked when authored).
+  var TRACE = {
+    EPI: {name:'Economic Policy Institute', claim:'up to ~32 million workers', settled:false,
+      quote:'"An increase to $15 by 2025 would directly raise wages for 19.6 million workers and indirectly raise wages for another 12.5 million."',
+      cite:'Economic Policy Institute, 2021', link:'https://www.epi.org/publication/why-america-needs-a-15-minimum-wage/',
+      vsName:'Congressional Budget Office (2021)', vsLink:'https://www.cbo.gov/publication/56975',
+      vsText:'estimates ~17 million workers affected — it counts only directly-affected workers.',
+      why:'The sources agree pay rises; they disagree on whether to count indirect "spillover" raises. That method choice is what makes the number contested, while "$7.25 since 2009" is not.'},
+    CBO: {name:'Congressional Budget Office', claim:'reduces employment by ~1.4 million', settled:false,
+      quote:'"Raising the federal minimum wage to $15 would reduce employment by 1.4 million workers in an average week."',
+      cite:'Congressional Budget Office, 2021', link:'https://www.cbo.gov/publication/56975',
+      vsName:'Cengiz, Dube, Lindner & Zipperer (QJE 2019)', vsLink:'https://www.nber.org/papers/w25434',
+      vsText:'studying actual state increases, find near-zero disemployment.',
+      why:'Contested because it pits a model-based projection (CBO) against quasi-experimental evidence from real-world increases.'},
+    Brookings: {name:'Brookings Institution', claim:'job losses concentrate in low-wage regions', settled:false,
+      quote:'"Effects are largest in low cost-of-living regions where $15 exceeds the local median wage."',
+      cite:'Brookings Institution', link:'https://www.brookings.edu/topic/minimum-wage/',
+      vsName:'Economic Policy Institute', vsLink:'https://www.epi.org/publication/why-america-needs-a-15-minimum-wage/',
+      vsText:'argues a national $15 floor lifts ~32 million workers with limited aggregate losses.',
+      why:'Contested because it hinges on regional vs national framing — where you draw the boundary changes the answer.'},
+    Cato: {name:'Cato Institute', claim:'a regressive way to fight poverty', settled:false,
+      quote:'"The minimum wage is a blunt, regressive way to fight poverty; much of the benefit misses poor households."',
+      cite:'Cato Institute', link:'https://www.cato.org/tags/minimum-wage',
+      vsName:'Economic Policy Institute', vsLink:'https://www.epi.org/publication/why-america-needs-a-15-minimum-wage/',
+      vsText:'finds raises flow disproportionately to low-wage workers and reduce inequality.',
+      why:'Contested because it is about incidence — who actually captures the gains — which studies measure differently.'},
+    BLS: {name:'Bureau of Labor Statistics', claim:'$7.25 since 2009', settled:true,
+      quote:'"The federal minimum wage has been $7.25 per hour since July 2009; its inflation-adjusted value peaked in 1968."',
+      cite:'Bureau of Labor Statistics', link:'https://www.bls.gov/opub/reports/minimum-wage/2022/home.htm',
+      vsName:null, vsLink:null, vsText:null,
+      why:'This is a historical data record, not a projection — no source disputes it. That is why it is tagged settled, not contested.'},
+    AFLCIO: {name:'AFL-CIO', claim:'limited effect on total jobs', settled:false,
+      quote:'"Raising the minimum wage to $15 would lift wages for millions of workers while research shows limited effects on overall employment."',
+      cite:'AFL-CIO', link:'https://aflcio.org/issues/minimum-wage',
+      vsName:'Congressional Budget Office (2021)', vsLink:'https://www.cbo.gov/publication/56975',
+      vsText:'projects 1.4 million fewer jobs in an average week.',
+      why:'Contested because it is the same employment-effects debate — labor points to state-level studies with near-zero job loss, while CBO\'s model projects reductions.'}
+  };
+  function link(text, url){ return url ? '<a href="'+url+'" target="_blank">'+text+'</a>' : text; }
+  function render(src, userClick){
+    var d = TRACE[src]; var p = document.getElementById('tracePanel');
+    var badge = d.settled ? '<span class="badge s">SETTLED</span>' : '<span class="badge c">CONTESTED</span>';
+    var html = '<h4>Tracing: '+d.name+' &mdash; "'+d.claim+'"'+badge+'</h4>';
+    html += '<div class="q">Verbatim: '+d.quote+' &mdash; '+d.cite+'</div>';
+    if(d.vsText){ html += '<div class="q against">Directly contradicting: '+link(d.vsName, d.vsLink)+' '+d.vsText+'</div>'; }
+    html += '<div class="why"><b>Why '+(d.settled?'this is settled':'this claim is contested')+':</b> '+d.why+'</div>';
+    html += '<div class="read">&#128279; '+link('Read the full source: '+d.name+' &rarr;', d.link)+'</div>';
+    p.innerHTML = html;
+    var cards = document.querySelectorAll('.card');
+    for(var i=0;i<cards.length;i++){ cards[i].classList.toggle('active', cards[i].getAttribute('data-src')===src); }
+    if(userClick){
+      p.classList.remove('flash'); void p.offsetWidth; p.classList.add('flash');
+      p.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  }
+  document.querySelectorAll('.card').forEach(function(c){
+    c.addEventListener('click', function(e){ if(e.target.tagName!=='A'){ render(c.getAttribute('data-src'), true); } });
+  });
+  render('EPI', false);
+</script>
+</body>
+</html>
